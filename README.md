@@ -1,0 +1,1 @@
+Better way to check ping time of Battlefield 3 servers.
