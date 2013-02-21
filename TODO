@@ -1,0 +1,9 @@
+Frontend:
+- User enters the username, selects the category (fav or recent) and gets the result
+- Above result is fetched with Ajax
+- Maybe a better server browser later on (maybe, maybe!)
+
+Backend:
+- Debug the script and catch exceptions
+- Use database to store server info to speed up the script
+- Implement a scraper which runs in background, scrapes bf3 server info and add them to DB
