@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+{% block customcss %}
+<style>
+.main {
+    width: 80%;
+    margin: auto;
+}
+table {
+    background: #ffffff;
+    margin-top: 60px;
+}
+</style>
+{% endblock %}
+{% block body %}
+<div class="container-fluid main">
+<table class="table table-bordered table-hover table-striped">
+<thead>
+    <tr>
+        <th>Server</th>
+        <th>Players</th>
+        <th>Ping</th>
+    </tr>
+</thead>
+<tbody>
+    {% for server in servers %}
+        <tr>
+            <td><a href="{{ server.url }}" target="_blank">{{ server.name }}</a></td>
+            <td>{{ server.num_players }}/{{ server.max_players }}</td>
+            <td>{{ server.ping }}ms</td>
+        </tr>
+    {% endfor %}
+</tbody>
+</table>
+</div>
+{% endblock %}
