@@ -55,9 +55,14 @@ def get_fav_server(username, category=0, limit=None, verbose=False, ping=True, p
         server.max_players = json_data[u'message'][u'SERVER_INFO'][u'maxPlayers']
         server.num_players = json_data[u'message'][u'SERVER_INFO'][u'numPlayers']
         server.country = json_data[u'message'][u'SERVER_INFO'][u'country']
+        server.region = json_data[u'message'][u'SERVER_INFO'][u'region']
         server.ranked = json_data[u'message'][u'SERVER_INFO'][u'ranked']
         server.punkbuster = json_data[u'message'][u'SERVER_INFO'][u'punkbuster']
         server.port = json_data[u'message'][u'SERVER_INFO'][u'port']
+        server.has_password = json_data[u'message'][u'SERVER_INFO'][u'hasPassword']
+        server.game_mode = int(json_data[u'message'][u'SERVER_INFO'][u'mapMode'])
+        server.map_code = json_data[u'message'][u'SERVER_INFO'][u'map']
+        server.map_list = json_data[u'message'][u'SERVER_INFO'][u'maps']
         server_list.append(server)
     if ping:
         if verbose:
@@ -106,9 +111,14 @@ class BF3Server:
         self.max_players = 0
         self.num_players = 0
         self.country = ''
+        self.region = ''
         self.ranked = False
         self.punkbuster = False
         self.port = 0
+        self.has_password = False
+        self.game_mode = ''
+        self.map_code = ''
+        self.map_list = []
 
     def __str__(self):
         response = "\nServer Name: " + self.name
@@ -117,6 +127,52 @@ class BF3Server:
 #        response += "\nServer URL:" + self.url
         response += "  |  Ping: " + str(self.ping) + "ms"
         return response
+
+    # Dictionary containing Map Names and their respective id
+    map_code = {
+        "MP_001": "Grand Bazaar",
+        "MP_003": "Tehran Highway",
+        "MP_007": "Caspian Border",
+        "MP_011": "Seine Crossing",
+        "MP_012": "Operation Firestorm",
+        "MP_013": "Damavand Peak",
+        "MP_017": "Noshahr Canals",
+        "MP_018": "Kharg Island",
+        "MP_Subway": "Operation Metro",
+        "XP1_001": "Strike at Karkand",
+        "XP1_002": "Gulf of Oman",
+        "XP1_003": "Sharqi Peninsula",
+        "XP1_004": "Wake Island",
+        "XP2_Factory": "Scrapmetal",
+        "XP2_Office": "Operation 925",
+        "XP2_Palace": "Donya Fortress",
+        "XP2_Skybar": "Ziba Tower",
+        "XP3_Alborz": "Alborz Mountains",
+        "XP3_Desert": "Bandar Desert",
+        "XP3_Shield": "Armored Shield",
+        "XP3_Valley": "Death Valley",
+        "XP4_FD": "Markaz Monolith",
+        "XP4_Parl": "Azadi Palace",
+        "XP4_Quake": "Epicenter",
+        "XP4_Rubble": "Talah Market"
+    }
+
+    # Dictionary containing game mode names and their respective id
+    game_mode = {
+        1: "Conquest",
+        2: "Rush",
+        4: "Squad Rush",
+        8: "Squad DM",
+        32: "Team DM",
+        64: "Conquest Large",
+        128: "Conquest Assault Large",
+        256: "Conquest Assault",
+        512: "Gun Master",
+        1024: "Conquest Domination",
+        2048: "Team DM 16 Players",
+        131072: "Tank Superiority",
+        4194304: "Scavenger"
+    }
 
 
 if __name__ == '__main__':

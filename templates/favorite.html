@@ -5,9 +5,12 @@
     width: 80%;
     margin: auto;
 }
-table {
+.table {
     background: #ffffff;
     margin-top: 60px;
+    width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
 }
 </style>
 {% endblock %}
@@ -24,7 +27,14 @@ table {
 <tbody>
     {% for server in servers %}
         <tr>
-            <td><a href="{{ server.url }}" target="_blank">{{ server.name }}</a></td>
+            <td>
+                <a href="{{ server.url }}" target="_blank">{{ server.name }}</a>
+                <span class="muted pull-right"><small>
+                    {{ bf3.game_mode[server.game_mode] }}&nbsp;•&nbsp;{{ bf3.map_code[server.map_code] }}
+                    &nbsp;&nbsp;
+                    <img src="{{ flag_icon_url % server.country }}"/>
+                </small></span>
+            </td>
             <td>{{ server.num_players }}/{{ server.max_players }}</td>
             <td>{{ server.ping }}ms</td>
         </tr>
