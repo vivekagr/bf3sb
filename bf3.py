@@ -2,12 +2,12 @@ import re
 import json
 import sys
 from bs4 import BeautifulSoup
-from pinger import do_one
+from pinger import do_one, multi_ping_query
 from urllib2 import urlopen
 from exc import ProfileNotFound
 
 
-def get_fav_server(username, category=0, ping=True, verbose=False, limit=None):
+def get_fav_server(username, category=0, limit=None, verbose=False, ping=True, ping_step=5):
     """
     Scrapes user's profile to find the favorite servers and return their IP addresses
 
@@ -15,6 +15,8 @@ def get_fav_server(username, category=0, ping=True, verbose=False, limit=None):
     :param category: 0 for favorite server or 1 for recently played server
     :param ping: Boolean. Whether server ping is desired or not
     :param verbose: Boolean. To get verbose output as the script progresses
+    :param ping_step: Number of servers to ping at once. Using a large value may result in incorrect (higher) ping.
+                      Default has been set to 5 which should be good even for even a weak/slow internet connection.
 
     Profile's server section contains two div with class 'box'.
 
@@ -39,8 +41,7 @@ def get_fav_server(username, category=0, ping=True, verbose=False, limit=None):
     if verbose:
         type_ = 'favorite' if category == 0 else 'recently played'
         print "Found {} {} servers from {}'s profile...".format(len(guids), type_, username)
-        if ping:
-            print "Please wait while the servers are being pinged..."
+        print "Gathering server information..."
     server_list = []
     # Fetching Server IP address (along with some other info), making new BF3Server object and adding the info to it
     for guid in guids:
@@ -58,13 +59,19 @@ def get_fav_server(username, category=0, ping=True, verbose=False, limit=None):
         server.punkbuster = json_data[u'message'][u'SERVER_INFO'][u'punkbuster']
         server.port = json_data[u'message'][u'SERVER_INFO'][u'port']
         server_list.append(server)
-        if ping:
-            server.ping = send_ping(server.ip)
+    if ping:
         if verbose:
-            print server
-    if verbose:
-        print '\nFinished...\n'
+            print "Now pinging the servers..."
+        ip_list = [x.ip for x in server_list]
+        ping_list = multi_ping_query(ip_list, timeout=1, step=ping_step)
+        for server in server_list:
+            ping = ping_list[server.ip] or 0.999
+            server.ping = int(ping * 1000)
     server_list.sort(key=lambda x: x.ping)
+    if verbose:
+        for server in server_list:
+            print server
+        print '\nFinished...\n'
     # Returning the list of BF3Server objects
     return server_list
 
@@ -77,8 +84,8 @@ def send_ping(host, count=3):
     :return: ping time in milliseconds, 9999 if timed out
     """
     ping_time = [do_one(host) for _ in range(count)]
-    # Filtering out None
-    ping_time = filter(lambda x: x is not None, ping_time)
+    # Filtering out timed out requests which returned None
+    ping_time = filter(None, ping_time)
     if len(ping_time) == 0:
         return 9999
     avg = sum(ping_time) / len(ping_time)
