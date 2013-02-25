@@ -19,27 +19,32 @@
 <table class="table table-bordered table-hover table-striped">
 <thead>
     <tr>
+        <th>#</th>
         <th>Server</th>
         <th>Players</th>
         <th>Ping</th>
     </tr>
 </thead>
 <tbody>
-    {% for server in servers %}
+    {% for index, server in servers %}
         <tr>
+            <td>{{ index + 1 }}</td>
             <td>
                 <a href="{{ server.url }}" target="_blank">{{ server.name }}</a>
                 <span class="muted pull-right"><small>
                     {{ bf3.game_mode[server.game_mode] }}&nbsp;•&nbsp;{{ bf3.map_code[server.map_code] }}
                     &nbsp;&nbsp;
-                    <img src="{{ flag_icon_url % server.country }}"/>
+                    <img src="{{ flag_icon_url % server.country_code }}" title="{{ server.country }}">
                 </small></span>
             </td>
-            <td>{{ server.num_players }}/{{ server.max_players }}</td>
+            <td>{{ server.num_players }} / {{ server.max_players }}
+                {% if server.queued_players %} [{{ server.queued_players }}] {% endif %}
+            </td>
             <td>{{ server.ping }}ms</td>
         </tr>
     {% endfor %}
 </tbody>
 </table>
+<small>Result served in {{ time_elapsed }} seconds.</small>
 </div>
 {% endblock %}

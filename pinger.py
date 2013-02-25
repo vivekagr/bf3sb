@@ -321,7 +321,7 @@ class PingQuery(asyncore.dispatcher):
         self.close()
 
 
-def multi_ping_query(hosts, timeout=1, step=512, ignore_errors=False):
+def multi_ping_query(hosts, timeout=1, step=512, ignore_errors=False, host_lookup=True):
     """
    Sends multiple icmp echo requests at once.
 
@@ -333,11 +333,14 @@ def multi_ping_query(hosts, timeout=1, step=512, ignore_errors=False):
 
    """
     results, host_list, id = {}, [], 0
-    for host in hosts:
-        try:
-            host_list.append(socket.gethostbyname(host))
-        except socket.gaierror:
-            results[host] = None
+    if host_lookup:
+        for host in hosts:
+            try:
+                host_list.append(socket.gethostbyname(host))
+            except socket.gaierror:
+                results[host] = None
+    else:
+        host_list = hosts
     while host_list:
         sock_list = []
         for ip in host_list[:step]: # select supports only a max of 512

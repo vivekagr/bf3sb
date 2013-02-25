@@ -2,9 +2,10 @@ import re
 import json
 import sys
 from bs4 import BeautifulSoup
-from pinger import do_one, multi_ping_query
-from urllib2 import urlopen
+from pinger import multi_ping_query
+from urllib2 import urlopen, Request
 from exc import ProfileNotFound
+from iso_country_codes import COUNTRY
 
 
 def get_fav_server(username, category=0, limit=None, verbose=False, ping=True, ping_step=5):
@@ -54,7 +55,9 @@ def get_fav_server(username, category=0, limit=None, verbose=False, ping=True, p
         server.url = "http://battlelog.battlefield.com/bf3/servers/show/%s/" % guid
         server.max_players = json_data[u'message'][u'SERVER_INFO'][u'maxPlayers']
         server.num_players = json_data[u'message'][u'SERVER_INFO'][u'numPlayers']
-        server.country = json_data[u'message'][u'SERVER_INFO'][u'country']
+        server.queued_players = int(json_data[u'message'][u'SERVER_INFO'][u'numQueued'])
+        server.country_code = json_data[u'message'][u'SERVER_INFO'][u'country']
+        server.country = COUNTRY[server.country_code.upper()]
         server.region = json_data[u'message'][u'SERVER_INFO'][u'region']
         server.ranked = json_data[u'message'][u'SERVER_INFO'][u'ranked']
         server.punkbuster = json_data[u'message'][u'SERVER_INFO'][u'punkbuster']
@@ -67,12 +70,7 @@ def get_fav_server(username, category=0, limit=None, verbose=False, ping=True, p
     if ping:
         if verbose:
             print "Now pinging the servers..."
-        ip_list = [x.ip for x in server_list]
-        ping_list = multi_ping_query(ip_list, timeout=1, step=ping_step)
-        for server in server_list:
-            ping = ping_list[server.ip] or 0.999
-            server.ping = int(ping * 1000)
-    server_list.sort(key=lambda x: x.ping)
+        server_list = send_ping(server_list, ping_step)
     if verbose:
         for server in server_list:
             print server
@@ -81,21 +79,50 @@ def get_fav_server(username, category=0, limit=None, verbose=False, ping=True, p
     return server_list
 
 
-def send_ping(host, count=3):
-    """
-    Pings the hostname given number of times and returns the average ping time.
-    :param host: hostname
-    :param count: number of times to ping
-    :return: ping time in milliseconds, 9999 if timed out
-    """
-    ping_time = [do_one(host) for _ in range(count)]
-    # Filtering out timed out requests which returned None
-    ping_time = filter(None, ping_time)
-    if len(ping_time) == 0:
-        return 9999
-    avg = sum(ping_time) / len(ping_time)
-    ping = int(avg * 1000)
-    return ping
+def browse_server(limit=30, ping=True):
+    main_json_data = []
+    # calculating how many times we have to loop
+    repeat = limit / 30
+    base_url = "http://battlelog.battlefield.com/bf3/servers/getAutoBrowseServers/?filtered=1&slots=1&slots=2&slots=4&slots=16&offset=%d"
+    for i in range(repeat + 1):
+        offset = 30 * repeat
+        req = Request(base_url % offset)
+        req.add_header("X-Requested-With", "XMLHttpRequest")
+        json_data = json.loads(urlopen(req).read())
+        main_json_data += json_data['data']
+    server_list = []
+    for server_data in main_json_data[:limit]:
+        server = BF3Server()
+        server.name = server_data['name']
+        server.guid = server_data['guid']
+        server.ip = server_data['ip']
+        server.url = "http://battlelog.battlefield.com/bf3/servers/show/%s/" % server.guid
+        server.max_players = server_data['maxPlayers']
+        server.num_players = server_data['numPlayers']
+        server.queued_players = int(server_data['numQueued'])
+        server.country_code = server_data['country']
+        server.country = COUNTRY[server.country_code.upper()]
+        server.region = server_data['region']
+        server.ranked = server_data['ranked']
+        server.punkbuster = server_data['punkbuster']
+        server.port = server_data['port']
+        server.has_password = server_data['hasPassword']
+        server.game_mode = int(server_data['mapMode'])
+        server.map_code = server_data['map']
+        server_list.append(server)
+    if ping:
+        server_list = send_ping(server_list)
+    return server_list
+
+
+def send_ping(servers, ping_step=5):
+    ip_list = [x.ip for x in servers]
+    ping_list = multi_ping_query(ip_list, timeout=1, step=ping_step, host_lookup=False)
+    for server in servers:
+        ping = ping_list[server.ip] or 0.999
+        server.ping = int(ping * 1000)
+    servers.sort(key=lambda x: x.ping)
+    return servers
 
 
 class BF3Server:
@@ -110,6 +137,7 @@ class BF3Server:
         self.ping = ''
         self.max_players = 0
         self.num_players = 0
+        self.queued_players = 0
         self.country = ''
         self.region = ''
         self.ranked = False

@@ -22,7 +22,7 @@
 .radio {
     margin-top: 8px;
 }
-button {
+#btn-profile {
     margin-top: 10px;
 }
 legend {
@@ -41,7 +41,7 @@ legend {
         {% endfor %}
     <form action="{{ url_for('fav') }}" method="POST" class="form-fav">
         <fieldset>
-            <legend>Get server ping stats</legend>
+            <legend>Browse servers from profile</legend>
         </fieldset>
         <input type="text" name="username" placeholder="Battlelog Username" class="input-xlarge" required>
         <input type="number" name="limit" min="1" placeholder="Max num of servers to ping (optional)" class="input-xlarge">
@@ -51,7 +51,16 @@ legend {
         <label class="radio">
             <input type="radio" name="serverType" value="1"> Recently played
         </label>
-        <button type="submit" class="btn">Submit</button>
+        <button id="btn-profile" type="submit" class="btn">Submit</button>
+    </form>
+    <form class="form-fav" action="{{ url_for('browse') }}" method="GET">
+        <fieldset>
+            <legend>Random Server Browser</legend>
+        </fieldset>
+        <div class="input-append">
+            <input type="number" name="limit" placeholder="Max num of results (default 30)">
+            <button type="submit" class="btn">Browse</button>
+        </div>
     </form>
     </div>
 {% endblock %}
