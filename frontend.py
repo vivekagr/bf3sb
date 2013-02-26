@@ -11,7 +11,7 @@ app.secret_key = "jdawdwaddd;dl2;dld'.,929d2jddw/"
 
 @app.route('/')
 def index():
-    return render_template('fav_form.html')
+    return render_template('index.html')
 
 
 @app.route('/fav/', methods=['POST'])
@@ -48,7 +48,7 @@ def fav():
     else:
         flag_icon_url = "http://battlelog-cdn.battlefield.com/cdnprefix/a/public/common/flags/%s.gif"
         time_elapsed = round(time() - start_time, 2)
-        return render_template('favorite.html', servers=enumerate(server_list), bf3=BF3Server,
+        return render_template('output.html', servers=enumerate(server_list), bf3=BF3Server,
                                flag_icon_url=flag_icon_url, time_elapsed=time_elapsed)
 
 
@@ -71,7 +71,7 @@ def browse():
     else:
         flag_icon_url = "http://battlelog-cdn.battlefield.com/cdnprefix/a/public/common/flags/%s.gif"
         time_elapsed = round(time() - start_time, 2)
-        return render_template('favorite.html', servers=enumerate(server_list), bf3=BF3Server,
+        return render_template('output.html', servers=enumerate(server_list), bf3=BF3Server,
                                flag_icon_url=flag_icon_url, time_elapsed=time_elapsed)
 
 if __name__ == '__main__':

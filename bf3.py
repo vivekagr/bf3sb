@@ -75,6 +75,8 @@ def get_fav_server(username, category=0, limit=None, verbose=False, ping=True, p
         for server in server_list:
             print server
         print '\nFinished...\n'
+    # Removing duplicate servers
+    server_list = list(set(server_list))
     # Returning the list of BF3Server objects
     return server_list
 
@@ -110,17 +112,31 @@ def browse_server(limit=30, ping=True):
         server.game_mode = int(server_data['mapMode'])
         server.map_code = server_data['map']
         server_list.append(server)
+    # Removing duplicate servers
+    server_list = list(set(server_list))
     if ping:
         server_list = send_ping(server_list)
     return server_list
 
 
-def send_ping(servers, ping_step=5):
+def send_ping(servers, repeat=3, ping_step=5):
     ip_list = [x.ip for x in servers]
-    ping_list = multi_ping_query(ip_list, timeout=1, step=ping_step, host_lookup=False)
+    ping_list = []
+    # Repeating the ping process.
+    for _ in range(repeat):
+        # Passing ip_list[:] because ping_list() is performing pop on the passed list with same reference.
+        ping_list.append(multi_ping_query(ip_list[:], timeout=1, step=ping_step, host_lookup=False))
     for server in servers:
-        ping = ping_list[server.ip] or 0.999
-        server.ping = int(ping * 1000)
+        # Collecting ping values for current server in a list.
+        pings = [x[server.ip] * 1000 for x in ping_list if x[server.ip]]
+        # Removing empty elements with filter and then converting them to integer value.
+        pings = map(int, pings)
+        # Finding average ping value if the list is not empty else returning 9999.
+        if len(pings):
+            server.ping = sum(pings) / len(pings)
+        else:
+            server.ping = 9999
+    # Sorting the server list based on ping
     servers.sort(key=lambda x: x.ping)
     return servers
 
@@ -150,11 +166,15 @@ class BF3Server:
 
     def __str__(self):
         response = "\nServer Name: " + self.name
-#        response += "\nServer GUID:" + self.guid
         response += "\nServer IP: " + self.ip
-#        response += "\nServer URL:" + self.url
         response += "  |  Ping: " + str(self.ping) + "ms"
         return response
+
+    def __eq__(self, other):
+        return self.guid == other.guid
+
+    def __hash__(self):
+        return hash(self.guid)
 
     # Dictionary containing Map Names and their respective id
     map_code = {
