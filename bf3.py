@@ -1,6 +1,7 @@
 import re
 import json
 import sys
+from collections import OrderedDict
 from bs4 import BeautifulSoup
 from pinger import multi_ping_query
 from urllib2 import urlopen, Request
@@ -178,92 +179,92 @@ class BF3Server:
         return hash(self.guid)
 
     # Dictionary containing Map Names and their respective id
-    map_code = {
-        "MP_001": "Grand Bazaar",
-        "MP_003": "Tehran Highway",
-        "MP_007": "Caspian Border",
-        "MP_011": "Seine Crossing",
-        "MP_012": "Operation Firestorm",
-        "MP_013": "Damavand Peak",
-        "MP_017": "Noshahr Canals",
-        "MP_018": "Kharg Island",
-        "MP_Subway": "Operation Metro",
-        "XP1_001": "Strike at Karkand",
-        "XP1_002": "Gulf of Oman",
-        "XP1_003": "Sharqi Peninsula",
-        "XP1_004": "Wake Island",
-        "XP2_Factory": "Scrapmetal",
-        "XP2_Office": "Operation 925",
-        "XP2_Palace": "Donya Fortress",
-        "XP2_Skybar": "Ziba Tower",
-        "XP3_Alborz": "Alborz Mountains",
-        "XP3_Desert": "Bandar Desert",
-        "XP3_Shield": "Armored Shield",
-        "XP3_Valley": "Death Valley",
-        "XP4_FD": "Markaz Monolith",
-        "XP4_Parl": "Azadi Palace",
-        "XP4_Quake": "Epicenter",
-        "XP4_Rubble": "Talah Market",
-        "XP5_001": "Operation Riverside",
-        "XP5_002": "Nebandan Flats",
-        "XP5_003": "Kiasar Railroad",
-        "XP5_004": "Sabalan Pipeline"
-    }
+    map_code = OrderedDict([
+        ("MP_001", "Grand Bazaar"),
+        ("MP_003", "Tehran Highway"),
+        ("MP_007", "Caspian Border"),
+        ("MP_011", "Seine Crossing"),
+        ("MP_012", "Operation Firestorm"),
+        ("MP_013", "Damavand Peak"),
+        ("MP_017", "Noshahr Canals"),
+        ("MP_018", "Kharg Island"),
+        ("MP_Subway", "Operation Metro"),
+        ("XP1_001", "Strike at Karkand"),
+        ("XP1_002", "Gulf of Oman"),
+        ("XP1_003", "Sharqi Peninsula"),
+        ("XP1_004", "Wake Island"),
+        ("XP2_Factory", "Scrapmetal"),
+        ("XP2_Office", "Operation 925"),
+        ("XP2_Palace", "Donya Fortress"),
+        ("XP2_Skybar", "Ziba Tower"),
+        ("XP3_Alborz", "Alborz Mountains"),
+        ("XP3_Desert", "Bandar Desert"),
+        ("XP3_Shield", "Armored Shield"),
+        ("XP3_Valley", "Death Valley"),
+        ("XP4_FD", "Markaz Monolith"),
+        ("XP4_Parl", "Azadi Palace"),
+        ("XP4_Quake", "Epicenter"),
+        ("XP4_Rubble", "Talah Market"),
+        ("XP5_001", "Operation Riverside"),
+        ("XP5_002", "Nebandan Flats"),
+        ("XP5_003", "Kiasar Railroad"),
+        ("XP5_004", "Sabalan Pipeline")
+    ])
 
     # Dictionary containing game mode names and their respective id
-    game_mode = {
-        1: "Conquest",
-        2: "Rush",
-        4: "Squad Rush",
-        8: "Squad DM",
-        32: "Team DM",
-        64: "Conquest Large",
-        128: "Conquest Assault Large",
-        256: "Conquest Assault",
-        512: "Gun Master",
-        1024: "Conquest Domination",
-        2048: "Team DM 16 Players",
-        131072: "Tank Superiority",
-        524288: "Capture the Flag",
-        4194304: "Scavenger",
-        8388608: "Air Superiority"
-    }
+    game_mode = OrderedDict([
+        (1, "Conquest"),
+        (2, "Rush"),
+        (4, "Squad Rush"),
+        (8, "Squad DM"),
+        (32, "Team DM"),
+        (64, "Conquest Large"),
+        (128, "Conquest Assault Large"),
+        (256, "Conquest Assault"),
+        (512, "Gun Master"),
+        (1024, "Conquest Domination"),
+        (2048, "Team DM 16 Players"),
+        (131072, "Tank Superiority"),
+        (524288, "Capture the Flag"),
+        (4194304, "Scavenger"),
+        (8388608, "Air Superiority")
+    ])
 
     # Dictionary containing game sizes and their respective id
-    game_size = {
-        16: "16",
-        24: "24",
-        32: "32",
-        48: "48",
-        64: "64",
-        0: "Other"
-    }
+    game_size = OrderedDict([
+        (16, "16"),
+        (24, "24"),
+        (32, "32"),
+        (48, "48"),
+        (64, "64"),
+        (0, "Other")
+    ])
 
     # Dictionary containing free slot info and their respective id
-    free_slots = {
-        16: "Full",
-        1: "1-5",
-        2: "6-10",
-        4: "10+",
-        8: "Empty"
-    }
+    free_slots = OrderedDict([
+        (16, "Full"),
+        (1, "1-5"),
+        (2, "6-10"),
+        (4, "10+"),
+        (8, "Empty")
+    ])
 
     # Dictionary containing presets and their respective id
-    preset = {
-        1: "Normal",
-        2: "Hardcore",
-        4: "Infantry Only"
-    }
+    preset = OrderedDict([
+        (1, "Normal"),
+        (2, "Hardcore"),
+        (4, "Infantry Only")
+    ])
 
     # Dictionary containing base game with DLCs and their respective id
-    game = {
-        0: "Battlefield 3",
-        512: "Back to Karkand",
-        2048: "Close Quarters",
-        4096: "Armored Kill",
-        8192: "Aftermath",
-        16384: "End Game"
-    }
+    game = OrderedDict([
+        (0, "Battlefield 3"),
+        (512, "Back to Karkand"),
+        (2048, "Close Quarters"),
+        (4096, "Armored Kill"),
+        (8192, "Aftermath"),
+        (16384, "End Game")
+    ])
 
 if __name__ == '__main__':
     if len(sys.argv) == 2:
