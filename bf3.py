@@ -85,7 +85,8 @@ def browse_server(limit=30, ping=True):
     main_json_data = []
     # calculating how many times we have to loop
     repeat = limit / 30
-    base_url = "http://battlelog.battlefield.com/bf3/servers/getAutoBrowseServers/?filtered=1&slots=1&slots=2&slots=4&slots=16&offset=%d"
+    base_url = "http://battlelog.battlefield.com/bf3/servers/getAutoBrowseServers/" \
+               "?filtered=1&slots=1&slots=2&slots=4&slots=16&offset=%d"
     for i in range(repeat + 1):
         offset = 30 * repeat
         req = Request(base_url % offset)
@@ -202,7 +203,11 @@ class BF3Server:
         "XP4_FD": "Markaz Monolith",
         "XP4_Parl": "Azadi Palace",
         "XP4_Quake": "Epicenter",
-        "XP4_Rubble": "Talah Market"
+        "XP4_Rubble": "Talah Market",
+        "XP5_001": "Operation Riverside",
+        "XP5_002": "Nebandan Flats",
+        "XP5_003": "Kiasar Railroad",
+        "XP5_004": "Sabalan Pipeline"
     }
 
     # Dictionary containing game mode names and their respective id
@@ -219,9 +224,46 @@ class BF3Server:
         1024: "Conquest Domination",
         2048: "Team DM 16 Players",
         131072: "Tank Superiority",
-        4194304: "Scavenger"
+        524288: "Capture the Flag",
+        4194304: "Scavenger",
+        8388608: "Air Superiority"
     }
 
+    # Dictionary containing game sizes and their respective id
+    game_size = {
+        16: "16",
+        24: "24",
+        32: "32",
+        48: "48",
+        64: "64",
+        0: "Other"
+    }
+
+    # Dictionary containing free slot info and their respective id
+    free_slots = {
+        16: "Full",
+        1: "1-5",
+        2: "6-10",
+        4: "10+",
+        8: "Empty"
+    }
+
+    # Dictionary containing presets and their respective id
+    preset = {
+        1: "Normal",
+        2: "Hardcore",
+        4: "Infantry Only"
+    }
+
+    # Dictionary containing base game with DLCs and their respective id
+    game = {
+        0: "Battlefield 3",
+        512: "Back to Karkand",
+        2048: "Close Quarters",
+        4096: "Armored Kill",
+        8192: "Aftermath",
+        16384: "End Game"
+    }
 
 if __name__ == '__main__':
     if len(sys.argv) == 2:
