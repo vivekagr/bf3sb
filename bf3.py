@@ -5,8 +5,11 @@ from collections import OrderedDict
 from bs4 import BeautifulSoup
 from pinger import multi_ping_query
 from urllib2 import urlopen, Request
-from exc import ProfileNotFound
 from iso_country_codes import COUNTRY
+
+
+class ProfileNotFoundError(Exception):
+    pass
 
 
 def get_fav_server(username, category=0, limit=None, verbose=False, ping=True, ping_step=5):
@@ -15,6 +18,7 @@ def get_fav_server(username, category=0, limit=None, verbose=False, ping=True, p
 
     :param username: Battlelog username
     :param category: 0 for favorite server or 1 for recently played server
+    :param limit: Max number of results
     :param ping: Boolean. Whether server ping is desired or not
     :param verbose: Boolean. To get verbose output as the script progresses
     :param ping_step: Number of servers to ping at once. Using a large value may result in incorrect (higher) ping.
@@ -31,7 +35,7 @@ def get_fav_server(username, category=0, limit=None, verbose=False, ping=True, p
         if verbose:
             print "Profile with username '%s' doesn't exists." % username
             sys.exit()
-        raise ProfileNotFound(username)
+        raise ProfileNotFoundError(username)
     data = BeautifulSoup(raw_html)
     server_div = data.find_all(class_='box')[category]
     # Parsing out the server url which contains server guid
@@ -270,5 +274,4 @@ if __name__ == '__main__':
     if len(sys.argv) == 2:
         get_fav_server(sys.argv[1], verbose=True)
     else:
-        get_fav_server('GuruBabaBangali', verbose=True)
-#    print send_ping('216.185.114.85')
+        print "Usage: Pass the Battlelog username as argument."

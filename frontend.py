@@ -1,7 +1,6 @@
 from flask import Flask, url_for, render_template, request, flash, redirect
 from urllib2 import URLError
-from bf3 import get_fav_server, BF3Server, browse_server
-from exc import ProfileNotFound
+from bf3 import get_fav_server, BF3Server, browse_server, ProfileNotFoundError
 from socket import error as socket_error
 from time import time
 
@@ -33,7 +32,7 @@ def fav():
         else:
             server_list = get_fav_server(user, int(type_))
 
-    except ProfileNotFound as e:
+    except ProfileNotFoundError as e:
         flash("Battlelog profile with username '%s' doesn't exist" % e.args[0])
         return redirect(url_for('index'))
 
