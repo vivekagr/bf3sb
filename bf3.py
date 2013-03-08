@@ -86,12 +86,13 @@ def get_fav_server(username, category=0, limit=None, verbose=False, ping=True, p
     return server_list
 
 
-def browse_server(limit=30, ping=True):
+def browse_server(limit=30, ping=True, base_url=False):
     main_json_data = []
     # calculating how many times we have to loop
     repeat = limit / 30
-    base_url = "http://battlelog.battlefield.com/bf3/servers/getAutoBrowseServers/" \
-               "?filtered=1&slots=1&slots=2&slots=4&slots=16&offset=%d"
+    if not base_url:
+        base_url = "http://battlelog.battlefield.com/bf3/servers/getAutoBrowseServers/" \
+                   "?filtered=1&slots=1&slots=2&slots=4&slots=16&offset=%d"
     for i in range(repeat + 1):
         offset = 30 * repeat
         req = Request(base_url % offset)
