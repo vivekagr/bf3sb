@@ -1,7 +1,11 @@
 import sys
+import webbrowser
 from PySide import QtGui, QtCore
 from furl.furl import furl
-from bf3 import BF3Server
+from jinja2 import FileSystemLoader
+from jinja2.environment import Environment
+from time import time
+from bf3 import BF3Server, browse_server
 
 
 class MainWindow(QtGui.QDialog):
@@ -107,6 +111,7 @@ class MainWindow(QtGui.QDialog):
         Fetches the data from Battlelog and shows the result to the user.
         Here self.build_url() is called for every QCheckBox list we have.
         """
+        start_time = time()
         self.base_url = furl("http://battlelog.battlefield.com/bf3/servers/")
         self.base_url.add({'filtered': '1'})
         self.build_url(self.map_check_box, BF3Server.map_code, 'maps')
@@ -116,6 +121,14 @@ class MainWindow(QtGui.QDialog):
         self.build_url(self.preset_check_box, BF3Server.preset, 'gamepresets')
         self.build_url(self.game_check_box, BF3Server.game, 'gameexpansions')
         print self.base_url
+        server_list = browse_server(url=str(self.base_url))
+        time_elapsed = round(time() - start_time, 2)
+        template_env = Environment()
+        template_env.loader = FileSystemLoader('.')
+        template_args = dict(servers=enumerate(server_list), bf3=BF3Server, time_elapsed=time_elapsed)
+        output = template_env.get_template('layout.html').render(**template_args).encode('utf8')
+        open('output_temp.html', 'w').write(output)
+        webbrowser.open('output_temp.html')
 
     def build_url(self, check_box_list, bf3_data_list, param_name):
         """

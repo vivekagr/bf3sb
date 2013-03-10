@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Battlefield 3 Server Browser</title>
+    <link rel="stylesheet" type="text/css" href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/css/bootstrap-combined.min.css" />
+    <style>
+        @import url(http://fonts.googleapis.com/css?family=Ubuntu);
+        body {
+            font-family: 'Ubuntu', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background: url(http://subtlepatterns.com/patterns/kindajean.png);
+        }
+        .brand a:hover { text-decoration: none;}
+    </style>
+    <style>
+        .main {
+            width: 80%;
+            margin: auto;
+        }
+        .table {
+            background: #ffffff;
+            margin-top: 60px;
+            width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar navbar-fixed-top">
+        <div class="navbar-inner">
+            <div class="container-fluid">
+                    <div class="brand">Battlefield 3 Server Browser</div>
+            </div>
+        </div>
+    </div>
+    <div class="container-fluid main">
+        <table class="table table-bordered table-hover table-striped table-condensed">
+            <thead>
+            <tr>
+                <th>#</th>
+                <th>Server</th>
+                <th>Players</th>
+                <th>Ping</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for index, server in servers %}
+                <tr>
+                    <td>{{ index + 1 }}</td>
+                    <td>
+                        <a href="{{ server.url }}" target="_blank">{{ server.name }}</a>
+                        <span class="muted"><small><small>{{ server.ip }}:{{ server.port }}</small></small></span>
+                <span class="muted pull-right"><small>
+                    {{ bf3.game_mode[server.game_mode] }}&nbsp;•&nbsp;{{ bf3.map_code[server.map_code] }}
+                    &nbsp;&nbsp;
+                    <img src="{{ "http://battlelog-cdn.battlefield.com/cdnprefix/a/public/common/flags/%s.gif" % server.country_code }}" title="{{ server.country }}">
+                </small></span>
+                    </td>
+                    <td>{{ server.num_players }} / {{ server.max_players }}
+                        {% if server.queued_players %} [{{ server.queued_players }}] {% endif %}
+                    </td>
+                    <td>{{ server.ping }}ms</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <small>Result served in {{ time_elapsed }} seconds.</small>
+    </div>
+<script type="text/javascript" src="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/js/bootstrap.min.js"></script>
+</body>
+</html>

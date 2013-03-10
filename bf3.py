@@ -86,19 +86,34 @@ def get_fav_server(username, category=0, limit=None, verbose=False, ping=True, p
     return server_list
 
 
-def browse_server(limit=30, ping=True, base_url=False):
+def browse_server(limit=30, ping=True, url=False):
+    """
+    :param limit: Number of results wanted.
+    :param ping: Whether the servers should be pinged or not.
+    :param url: Battlelog server browser URL with required parameters.
+                If url not provided then random results are returned.
+    Random search query (with getAutoBrowseServers url path suffix) and normal search query
+    return different json structure. Also "X-AjaxNavigation" header is required when making normal search query.
+    """
     main_json_data = []
     # calculating how many times we have to loop
     repeat = limit / 30
-    if not base_url:
+    if url:
+        base_url = url + "&offset=%d"
+    else:
         base_url = "http://battlelog.battlefield.com/bf3/servers/getAutoBrowseServers/" \
                    "?filtered=1&slots=1&slots=2&slots=4&slots=16&offset=%d"
     for i in range(repeat + 1):
         offset = 30 * repeat
         req = Request(base_url % offset)
         req.add_header("X-Requested-With", "XMLHttpRequest")
+        if url:
+            req.add_header("X-AjaxNavigation", "1")
         json_data = json.loads(urlopen(req).read())
-        main_json_data += json_data['data']
+        if url:
+            main_json_data += json_data['context']['servers']
+        else:
+            main_json_data += json_data['data']
     server_list = []
     for server_data in main_json_data[:limit]:
         server = BF3Server()
@@ -182,6 +197,8 @@ class BF3Server:
 
     def __hash__(self):
         return hash(self.guid)
+
+    # OrderedDict is used rather than normal dictionaries to preserve the ordered of the elements.
 
     # Dictionary containing Map Names and their respective id
     map_code = OrderedDict([
