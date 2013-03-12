@@ -1,19 +1,24 @@
 import sys
 import webbrowser
+from socket import error as socker_error
+from urllib2 import URLError
 from PySide import QtGui, QtCore
 from furl.furl import furl
 from jinja2 import FileSystemLoader
 from jinja2.environment import Environment
 from time import time
-from bf3 import BF3Server, browse_server
+from bf3 import BF3Server, browse_server, get_regions
+from iso_country_codes import COUNTRY
+from pinger import do_one
 
 
 class MainWindow(QtGui.QDialog):
 
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
-        self.setWindowTitle('BF3 Server Browser')
+        self.setWindowTitle('Battlefield 3 Server Browser')
         self.setWindowFlags(QtGui.QStyle.SP_TitleBarMinButton)
+        QtGui.QStatusBar
         # Main Vertical Box Layout
         vbox = QtGui.QVBoxLayout()
 
@@ -35,36 +40,55 @@ class MainWindow(QtGui.QDialog):
         # Base Game and Expansion Packs List
         self.game_check_box, game_widget = self.make_layout(3, BF3Server.game.values(), 'GAME')
 
+        # Text box for server name search query
+        self.server_name_search_box = QtGui.QLineEdit()
+        self.server_name_search_box.setPlaceholderText("Server Name Filter")
+
+        self.countries = []
+
         # Lets make the buttons
         browse_button = QtGui.QPushButton('Browse')
         default_button = QtGui.QPushButton('Default')
+        regions_button = QtGui.QPushButton('Select Regions')
         # QHBoxLayout for the buttons
         button_hbox = QtGui.QHBoxLayout()
         # Adding the buttons to the layout. addStretch() adds blank space between the buttons.
         button_hbox.addWidget(default_button)
-        button_hbox.addStretch(1)
+        button_hbox.addStretch(True)
+        button_hbox.addWidget(regions_button)
         button_hbox.addWidget(browse_button)
 
-        # QVBoxLayout for adding various small widgets.
-        vbox_inner = QtGui.QVBoxLayout()
-        vbox_inner.addWidget(mode_widget)
-        vbox_inner.addWidget(game_size_widget)
-        vbox_inner.addWidget(free_slots_widget)
-        vbox_inner.addWidget(preset_widget)
-        vbox_inner.addWidget(game_widget)
+        # QVBoxLayout for adding various small widgets to the left.
+        vbox_left = QtGui.QVBoxLayout()
+        vbox_left.addWidget(mode_widget)
+        vbox_left.addWidget(game_size_widget)
+        vbox_left.addWidget(free_slots_widget)
+        vbox_left.addWidget(preset_widget)
+        vbox_left.addWidget(game_widget)
 
-        # QHBoxLayout for making two main columns. vbox_inner is added to the left and map_widget to the right.
+        # QVBoxLayout fir adding map name checkboxes and other widgets.
+        vbox_right = QtGui.QVBoxLayout()
+        vbox_right.addWidget(map_widget)
+        vbox_right.addWidget(self.server_name_search_box)
+
+        # QHBoxLayout for making two main columns. vbox_left is added to the left and map_widget to the right.
         hbox = QtGui.QHBoxLayout()
-        hbox.addLayout(vbox_inner)
-        hbox.addWidget(map_widget)
+        hbox.addLayout(vbox_left)
+        hbox.addLayout(vbox_right)
+
+        # Label to show the selected regions/countries.
+        self.region_label = QtGui.QLabel("Region: None")
+        self.region_label.setWordWrap(True)
 
         # Finally adding the hbox containing almost all checkboxes to the main vbox.
         # Buttons are added to the bottom of the vbox.
         vbox.addLayout(hbox)
+        vbox.addWidget(self.region_label)
         vbox.addLayout(button_hbox)
 
         browse_button.clicked.connect(self.fetch_data)
         default_button.clicked.connect(self.set_default)
+        regions_button.clicked.connect(self.callRegionWindow)
 
         self.setLayout(vbox)
         self.set_default()
@@ -79,6 +103,8 @@ class MainWindow(QtGui.QDialog):
         :return group_box: QGroupBox object enclosing the grid of checkboxes.
         """
         check_box_list = []
+        if len(label_list) < col:
+            col = len(label_list)
         grid_layout = QtGui.QGridLayout()
         for i in range((len(label_list) / col) + 1):
             for j in range(col):
@@ -96,6 +122,7 @@ class MainWindow(QtGui.QDialog):
         self.clear_all_checkboxes()
         map(lambda x: x.toggle(), self.game_check_box)
         self.preset_check_box[0].toggle()
+        self.server_name_search_box.clear()
 
     def clear_all_checkboxes(self):
         """ Clears all the checkboxes. """
@@ -110,7 +137,14 @@ class MainWindow(QtGui.QDialog):
         """
         Fetches the data from Battlelog and shows the result to the user.
         Here self.build_url() is called for every QCheckBox list we have.
+        Checks whether the application has admin privilege by sending one ping.
         """
+        try:
+            do_one("battlelog.battlefield.com")
+        except socker_error:
+            error_msg = "Cannot ping the servers since the application doesn't have admin privilege."
+            QtGui.QMessageBox.warning(self, "Socket Error", error_msg)
+            return
         start_time = time()
         self.base_url = furl("http://battlelog.battlefield.com/bf3/servers/")
         self.base_url.add({'filtered': '1'})
@@ -120,8 +154,17 @@ class MainWindow(QtGui.QDialog):
         self.build_url(self.free_slots_check_box, BF3Server.free_slots, 'slots')
         self.build_url(self.preset_check_box, BF3Server.preset, 'gamepresets')
         self.build_url(self.game_check_box, BF3Server.game, 'gameexpansions')
+        if self.countries:
+            self.base_url.add({'useLocation': '1'})
+            self.base_url.add({'country': '|'.join(self.countries)})
         print self.base_url
-        server_list = browse_server(url=str(self.base_url))
+        print self.countries
+        try:
+            server_list = browse_server(url=str(self.base_url))
+        except URLError:
+            error_msg = "Unable to retrieve server data from the Battlelog. Please check your network connection."
+            QtGui.QMessageBox.warning(self, "Network Error", error_msg)
+            return
         time_elapsed = round(time() - start_time, 2)
         template_env = Environment()
         template_env.loader = FileSystemLoader('.')
@@ -141,6 +184,71 @@ class MainWindow(QtGui.QDialog):
                 map_name = [x for x, y in bf3_data_list.iteritems() if y == checkbox.text()]
                 self.base_url.add({param_name: map_name})
 
+    def callRegionWindow(self):
+        """
+        Invokes the Region Selection dialog.
+        """
+        try:
+            country_codes = get_regions()
+        except URLError:
+            error_message = "Unable to retrieve region data from the Battlelog. Please check your network connection."
+            QtGui.QMessageBox.warning(self, "Network Error", error_message)
+            return
+        dialog = RegionWindow(country_codes)
+        if dialog.exec_():
+            checked_countries = []
+            for region in dialog.cc_check_boxes:
+                for check_box in region:
+                    if check_box.isChecked():
+                        checked_countries.append(check_box.text())
+            if len(checked_countries):
+                region_label_text = "Regions: " + ', '.join(checked_countries)
+                self.region_label.setText(region_label_text)
+                self.countries = [y.lower() for x in checked_countries for y, z in COUNTRY.iteritems() if z == x.upper()]
+            else:
+                self.region_label.setText("Region: None")
+
+
+class RegionWindow(MainWindow):
+
+    def __init__(self, country_codes, parent=None):
+        super(MainWindow, self).__init__(parent)
+        self.setWindowTitle('Region Selector')
+        vbox = QtGui.QVBoxLayout()
+
+        self.cc_check_boxes = []
+        cc_group_boxes = []
+        for region in country_codes.keys():
+            country_codes_list = [COUNTRY[i.upper()].title() for i in country_codes[region]]
+            check_boxes, group_box = self.make_layout(2, country_codes_list, BF3Server.regions[region])
+            self.cc_check_boxes.append(check_boxes)
+            cc_group_boxes.append(group_box)
+
+        hbox = QtGui.QHBoxLayout()
+        hbox_vbox_left = QtGui.QVBoxLayout()
+        hbox_vbox_right = QtGui.QVBoxLayout()
+
+        hbox_vbox_left.addWidget(cc_group_boxes[0])
+        hbox_vbox_left.addWidget(cc_group_boxes[1])
+        for i in cc_group_boxes[2:]:
+            hbox_vbox_right.addWidget(i)
+
+        hbox.addLayout(hbox_vbox_left)
+        hbox.addLayout(hbox_vbox_right)
+        vbox.addLayout(hbox)
+
+        button_hbox = QtGui.QHBoxLayout()
+        ok_button = QtGui.QPushButton("OK")
+        cancel_button = QtGui.QPushButton("Cancel")
+        button_hbox.addStretch(True)
+        button_hbox.addWidget(ok_button)
+        button_hbox.addWidget(cancel_button)
+        vbox.addLayout(button_hbox)
+
+        self.connect(ok_button, QtCore.SIGNAL("clicked()"), self, QtCore.SLOT("accept()"))
+        self.connect(cancel_button, QtCore.SIGNAL("clicked()"), self, QtCore.SLOT("reject()"))
+
+        self.setLayout(vbox)
 
 app = QtGui.QApplication(sys.argv)
 window = MainWindow()

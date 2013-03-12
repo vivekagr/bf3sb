@@ -54,7 +54,7 @@
                 <span class="muted pull-right"><small>
                     {{ bf3.game_mode[server.game_mode] }}&nbsp;•&nbsp;{{ bf3.map_code[server.map_code] }}
                     &nbsp;&nbsp;
-                    <img src="{{ "http://battlelog-cdn.battlefield.com/cdnprefix/a/public/common/flags/%s.gif" % server.country_code }}" title="{{ server.country }}">
+                    <img src="{{ "http://battlelog-cdn.battlefield.com/cdnprefix/a/public/common/flags/%s.gif" % server.country_code }}" title="{{ server.country.title() }}">
                 </small></span>
                     </td>
                     <td>{{ server.num_players }} / {{ server.max_players }}

@@ -99,13 +99,13 @@ def browse_server(limit=30, ping=True, url=False):
     # calculating how many times we have to loop
     repeat = limit / 30
     if url:
-        base_url = url + "&offset=%d"
+        base_url = url + "&offset={}"
     else:
         base_url = "http://battlelog.battlefield.com/bf3/servers/getAutoBrowseServers/" \
-                   "?filtered=1&slots=1&slots=2&slots=4&slots=16&offset=%d"
+                   "?filtered=1&slots=1&slots=2&slots=4&slots=16&offset={}"
     for i in range(repeat + 1):
         offset = 30 * repeat
-        req = Request(base_url % offset)
+        req = Request(base_url.format(offset))
         req.add_header("X-Requested-With", "XMLHttpRequest")
         if url:
             req.add_header("X-AjaxNavigation", "1")
@@ -163,6 +163,12 @@ def send_ping(servers, repeat=3, ping_step=5):
     return servers
 
 
+def get_regions():
+    json_data = json.loads(urlopen("http://battlelog.battlefield.com/bf3/servers/getServerRegions/").read())
+    country_code = json_data['message']
+    return country_code
+
+
 class BF3Server:
     """
     Class representing a BF3 Server
@@ -198,7 +204,7 @@ class BF3Server:
     def __hash__(self):
         return hash(self.guid)
 
-    # OrderedDict is used rather than normal dictionaries to preserve the ordered of the elements.
+    # OrderedDict is used rather than normal dictionaries to preserve the order of the elements.
 
     # Dictionary containing Map Names and their respective id
     map_code = OrderedDict([
@@ -286,6 +292,16 @@ class BF3Server:
         (4096, "Armored Kill"),
         (8192, "Aftermath"),
         (16384, "End Game")
+    ])
+
+    regions = OrderedDict([
+        ("1", "North America"),
+        ("2", "South America"),
+        ("4", "Antarctica"),
+        ("8", "Africa"),
+        ("16", "Europe"),
+        ("32", "Asia"),
+        ("64", "Oceania")
     ])
 
 if __name__ == '__main__':
