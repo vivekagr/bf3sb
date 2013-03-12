@@ -18,7 +18,6 @@ class MainWindow(QtGui.QDialog):
         super(MainWindow, self).__init__(parent)
         self.setWindowTitle('Battlefield 3 Server Browser')
         self.setWindowFlags(QtGui.QStyle.SP_TitleBarMinButton)
-        QtGui.QStatusBar
         # Main Vertical Box Layout
         vbox = QtGui.QVBoxLayout()
 
@@ -44,19 +43,30 @@ class MainWindow(QtGui.QDialog):
         self.server_name_search_box = QtGui.QLineEdit()
         self.server_name_search_box.setPlaceholderText("Server Name Filter")
 
+        # Max results limit spinbox, its label and the QHboxLayout
+        self.results_limit_spinbox = QtGui.QSpinBox()
+        self.results_limit_spinbox.setRange(1, 1000)
+        self.results_limit_spinbox.setValue(30)
+        results_limit_label = QtGui.QLabel("Maximum number of results")
+        results_limit_hbox = QtGui.QHBoxLayout()
+        results_limit_hbox.addWidget(results_limit_label)
+        results_limit_hbox.addSpacing(30)
+        results_limit_hbox.addWidget(self.results_limit_spinbox)
+
         self.countries = []
+        self.countries_full = []
 
         # Lets make the buttons
-        browse_button = QtGui.QPushButton('Browse')
+        self.browse_button = QtGui.QPushButton('Browse')
         default_button = QtGui.QPushButton('Default')
-        regions_button = QtGui.QPushButton('Select Regions')
+        regions_button = QtGui.QPushButton('Set Region')
         # QHBoxLayout for the buttons
         button_hbox = QtGui.QHBoxLayout()
         # Adding the buttons to the layout. addStretch() adds blank space between the buttons.
         button_hbox.addWidget(default_button)
         button_hbox.addStretch(True)
         button_hbox.addWidget(regions_button)
-        button_hbox.addWidget(browse_button)
+        button_hbox.addWidget(self.browse_button)
 
         # QVBoxLayout for adding various small widgets to the left.
         vbox_left = QtGui.QVBoxLayout()
@@ -70,6 +80,7 @@ class MainWindow(QtGui.QDialog):
         vbox_right = QtGui.QVBoxLayout()
         vbox_right.addWidget(map_widget)
         vbox_right.addWidget(self.server_name_search_box)
+        vbox_right.addLayout(results_limit_hbox)
 
         # QHBoxLayout for making two main columns. vbox_left is added to the left and map_widget to the right.
         hbox = QtGui.QHBoxLayout()
@@ -86,7 +97,7 @@ class MainWindow(QtGui.QDialog):
         vbox.addWidget(self.region_label)
         vbox.addLayout(button_hbox)
 
-        browse_button.clicked.connect(self.fetch_data)
+        self.browse_button.clicked.connect(self.fetch_data)
         default_button.clicked.connect(self.set_default)
         regions_button.clicked.connect(self.callRegionWindow)
 
@@ -119,15 +130,16 @@ class MainWindow(QtGui.QDialog):
 
     def set_default(self):
         """ Checks the default options as on Battlelog. """
-        self.clear_all_checkboxes()
+        check_box_listception = (self.map_check_box, self.mode_check_box, self.game_size_check_box,
+                                 self.free_slots_check_box, self.preset_check_box, self.game_check_box)
+        self.clear_all_checkboxes(check_box_listception)
         map(lambda x: x.toggle(), self.game_check_box)
         self.preset_check_box[0].toggle()
         self.server_name_search_box.clear()
+        self.results_limit_spinbox.setValue(30)
 
-    def clear_all_checkboxes(self):
+    def clear_all_checkboxes(self, check_box_listception):
         """ Clears all the checkboxes. """
-        check_box_listception = (self.map_check_box, self.mode_check_box, self.game_size_check_box,
-                                 self.free_slots_check_box, self.preset_check_box, self.game_check_box)
         for check_box_list in check_box_listception:
             for check_box in check_box_list:
                 if check_box.isChecked():
@@ -145,6 +157,7 @@ class MainWindow(QtGui.QDialog):
             error_msg = "Cannot ping the servers since the application doesn't have admin privilege."
             QtGui.QMessageBox.warning(self, "Socket Error", error_msg)
             return
+        self.browse_button.setDisabled(True)
         start_time = time()
         self.base_url = furl("http://battlelog.battlefield.com/bf3/servers/")
         self.base_url.add({'filtered': '1'})
@@ -160,7 +173,7 @@ class MainWindow(QtGui.QDialog):
         print self.base_url
         print self.countries
         try:
-            server_list = browse_server(url=str(self.base_url))
+            server_list = browse_server(url=str(self.base_url), limit=self.results_limit_spinbox.value())
         except URLError:
             error_msg = "Unable to retrieve server data from the Battlelog. Please check your network connection."
             QtGui.QMessageBox.warning(self, "Network Error", error_msg)
@@ -171,6 +184,7 @@ class MainWindow(QtGui.QDialog):
         template_args = dict(servers=enumerate(server_list), bf3=BF3Server, time_elapsed=time_elapsed)
         output = template_env.get_template('layout.html').render(**template_args).encode('utf8')
         open('output_temp.html', 'w').write(output)
+        self.browse_button.setEnabled(True)
         webbrowser.open('output_temp.html')
 
     def build_url(self, check_box_list, bf3_data_list, param_name):
@@ -194,13 +208,14 @@ class MainWindow(QtGui.QDialog):
             error_message = "Unable to retrieve region data from the Battlelog. Please check your network connection."
             QtGui.QMessageBox.warning(self, "Network Error", error_message)
             return
-        dialog = RegionWindow(country_codes)
+        dialog = RegionWindow(country_codes, self.countries_full)
         if dialog.exec_():
             checked_countries = []
             for region in dialog.cc_check_boxes:
                 for check_box in region:
                     if check_box.isChecked():
                         checked_countries.append(check_box.text())
+            self.countries_full = checked_countries
             if len(checked_countries):
                 region_label_text = "Regions: " + ', '.join(checked_countries)
                 self.region_label.setText(region_label_text)
@@ -211,9 +226,10 @@ class MainWindow(QtGui.QDialog):
 
 class RegionWindow(MainWindow):
 
-    def __init__(self, country_codes, parent=None):
+    def __init__(self, country_codes, countries, parent=None):
         super(MainWindow, self).__init__(parent)
         self.setWindowTitle('Region Selector')
+        self.countries = countries
         vbox = QtGui.QVBoxLayout()
 
         self.cc_check_boxes = []
@@ -238,17 +254,32 @@ class RegionWindow(MainWindow):
         vbox.addLayout(hbox)
 
         button_hbox = QtGui.QHBoxLayout()
+        clear_all_button = QtGui.QPushButton("Clear All")
         ok_button = QtGui.QPushButton("OK")
         cancel_button = QtGui.QPushButton("Cancel")
+        button_hbox.addWidget(clear_all_button)
         button_hbox.addStretch(True)
         button_hbox.addWidget(ok_button)
         button_hbox.addWidget(cancel_button)
         vbox.addLayout(button_hbox)
 
+        clear_all_button.clicked.connect(self.clear_checkboxes)
         self.connect(ok_button, QtCore.SIGNAL("clicked()"), self, QtCore.SLOT("accept()"))
         self.connect(cancel_button, QtCore.SIGNAL("clicked()"), self, QtCore.SLOT("reject()"))
 
+        self.check_already_selected_boxes()
+
         self.setLayout(vbox)
+
+    def clear_checkboxes(self):
+        self.clear_all_checkboxes(self.cc_check_boxes)
+
+    def check_already_selected_boxes(self):
+        if self.countries:
+            for check_boxes in self.cc_check_boxes:
+                for check_box in check_boxes:
+                    if check_box.text() in self.countries:
+                        check_box.toggle()
 
 app = QtGui.QApplication(sys.argv)
 window = MainWindow()
