@@ -7,6 +7,8 @@ from pinger import multi_ping_query
 from urllib2 import urlopen, Request
 from iso_country_codes import COUNTRY
 
+USER_AGENT = "Battlefield 3 Server Browser v0.1 - https://github.com/vivekagr/bf3"
+
 
 class ProfileNotFoundError(Exception):
     pass
@@ -86,7 +88,7 @@ def get_fav_server(username, category=0, limit=None, verbose=False, ping=True, p
     return server_list
 
 
-def browse_server(limit=30, ping=True, url=False):
+def browse_server(limit=30, ping=True, url=False, ping_repeat=3, ping_step=5):
     """
     :param limit: Number of results wanted.
     :param ping: Whether the servers should be pinged or not.
@@ -107,6 +109,7 @@ def browse_server(limit=30, ping=True, url=False):
         offset = 30 * repeat
         req = Request(base_url.format(offset))
         req.add_header("X-Requested-With", "XMLHttpRequest")
+        req.add_header("User-Agent", USER_AGENT)
         if url:
             req.add_header("X-AjaxNavigation", "1")
         json_data = json.loads(urlopen(req).read())
@@ -137,15 +140,15 @@ def browse_server(limit=30, ping=True, url=False):
     # Removing duplicate servers
     server_list = list(set(server_list))
     if ping:
-        server_list = send_ping(server_list)
+        server_list = send_ping(server_list, ping_repeat=ping_repeat, ping_step=ping_step)
     return server_list
 
 
-def send_ping(servers, repeat=3, ping_step=5):
+def send_ping(servers, ping_repeat=3, ping_step=5):
     ip_list = [x.ip for x in servers]
     ping_list = []
     # Repeating the ping process.
-    for _ in range(repeat):
+    for _ in range(ping_repeat):
         # Passing ip_list[:] because ping_list() is performing pop on the passed list with same reference.
         ping_list.append(multi_ping_query(ip_list[:], timeout=1, step=ping_step, host_lookup=False))
     for server in servers:
@@ -164,7 +167,9 @@ def send_ping(servers, repeat=3, ping_step=5):
 
 
 def get_regions():
-    json_data = json.loads(urlopen("http://battlelog.battlefield.com/bf3/servers/getServerRegions/").read())
+    req = Request("http://battlelog.battlefield.com/bf3/servers/getServerRegions/")
+    req.add_header("User-Agent", USER_AGENT)
+    json_data = json.loads(urlopen(req).read())
     country_code = json_data['message']
     return country_code
 

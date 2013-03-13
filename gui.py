@@ -63,6 +63,8 @@ class MainWindow(QtGui.QDialog):
             "modeRotation": "-1",
             "password": "-1"
         }
+        self.ping_repeat = 3
+        self.ping_step = 5
 
         # Lets make the buttons
         self.browse_button = QtGui.QPushButton('Browse')
@@ -168,7 +170,6 @@ class MainWindow(QtGui.QDialog):
             error_msg = "Cannot ping the servers since the application doesn't have admin privilege."
             QtGui.QMessageBox.warning(self, "Socket Error", error_msg)
             return
-        self.browse_button.setDisabled(True)
         start_time = time()
         self.base_url = furl("http://battlelog.battlefield.com/bf3/servers/")
         self.base_url.add({'filtered': '1'})
@@ -182,9 +183,13 @@ class MainWindow(QtGui.QDialog):
         if self.countries:
             self.base_url.add({'useLocation': '1'})
             self.base_url.add({'country': '|'.join(self.countries)})
+        if self.server_name_search_box.text():
+            self.base_url.add({'q': self.server_name_search_box.text()})
         print self.base_url
         try:
-            server_list = browse_server(url=str(self.base_url), limit=self.results_limit_spinbox.value())
+            params = dict(url=str(self.base_url), limit=self.results_limit_spinbox.value(),
+                          ping_repeat=self.ping_repeat, ping_step=self.ping_step)
+            server_list = browse_server(**params)
         except URLError:
             error_msg = "Unable to retrieve server data from the Battlelog. Please check your network connection."
             QtGui.QMessageBox.warning(self, "Network Error", error_msg)
@@ -195,7 +200,6 @@ class MainWindow(QtGui.QDialog):
         template_args = dict(servers=enumerate(server_list), bf3=BF3Server, time_elapsed=time_elapsed)
         output = template_env.get_template('layout.html').render(**template_args).encode('utf8')
         open('output_temp.html', 'w').write(output)
-        self.browse_button.setEnabled(True)
         webbrowser.open('output_temp.html')
 
     def build_url(self, check_box_list, bf3_data_list, param_name):
@@ -233,18 +237,21 @@ class MainWindow(QtGui.QDialog):
                 self.countries = [y.lower() for x in checked_countries for y, z in COUNTRY.iteritems() if z == x.upper()]
             else:
                 self.region_label.setText("Region: None")
+                self.countries = []
 
     def call_settings_window(self):
         """
         Invokes the Settings dialog.
         """
-        dialog = SettingsWindow(self.detailed_settings)
+        dialog = SettingsWindow(self.detailed_settings, self.ping_repeat, self.ping_step)
         if dialog.exec_():
             value = {'Yes': '1', 'No': '0', 'All': '-1'}
             for param_name, radio_buttons in dialog.radio_buttons.iteritems():
                 for radio_btn in radio_buttons:
                     if radio_btn.isChecked():
                         self.detailed_settings[param_name] = value[radio_btn.text()]
+            self.ping_repeat = dialog.ping_repeat.value()
+            self.ping_step = dialog.ping_step.value()
         print self.detailed_settings
 
 
@@ -269,8 +276,8 @@ class RegionWindow(MainWindow):
         hbox_vbox_right = QtGui.QVBoxLayout()
 
         hbox_vbox_left.addWidget(cc_group_boxes[0])
-        hbox_vbox_left.addWidget(cc_group_boxes[1])
-        for i in cc_group_boxes[2:]:
+        hbox_vbox_left.addWidget(cc_group_boxes[-1])
+        for i in cc_group_boxes[1:-1]:
             hbox_vbox_right.addWidget(i)
 
         hbox.addLayout(hbox_vbox_left)
@@ -307,10 +314,12 @@ class RegionWindow(MainWindow):
 
 
 class SettingsWindow(QtGui.QDialog):
-    def __init__(self, detailed_settings, parent=None):
+    def __init__(self, detailed_settings, ping_repeat_val, ping_step_val, parent=None):
         super(SettingsWindow, self).__init__(parent)
         self.setWindowTitle("Settings")
         self.detailed_settings = detailed_settings
+        self.ping_repeat_val = ping_repeat_val
+        self.ping_step_val = ping_step_val
 
         vbox = QtGui.QVBoxLayout()
 
@@ -339,6 +348,25 @@ class SettingsWindow(QtGui.QDialog):
         grid.addWidget(mode_rotation, 1, 1)
         grid.addWidget(password_protection, 1, 2)
         vbox.addLayout(grid)
+
+        advanced_group_box = QtGui.QGroupBox("Advanced Settings")
+        advanced_vbox = QtGui.QVBoxLayout()
+        hbox1 = QtGui.QHBoxLayout()
+        hbox1.addWidget(QtGui.QLabel("Number of times to repeat ping process"))
+        self.ping_repeat = QtGui.QSpinBox()
+        self.ping_repeat.setRange(1, 100)
+        self.ping_repeat.setValue(self.ping_repeat_val)
+        hbox1.addWidget(self.ping_repeat)
+        hbox2 = QtGui.QHBoxLayout()
+        hbox2.addWidget(QtGui.QLabel("Number of servers to ping at a time"))
+        self.ping_step = QtGui.QSpinBox()
+        self.ping_step.setRange(1, 100)
+        self.ping_step.setValue(self.ping_step_val)
+        hbox2.addWidget(self.ping_step)
+        advanced_vbox.addLayout(hbox1)
+        advanced_vbox.addLayout(hbox2)
+        advanced_group_box.setLayout(advanced_vbox)
+        vbox.addWidget(advanced_group_box)
 
         button_hbox = QtGui.QHBoxLayout()
         ok_button = QtGui.QPushButton("OK")
