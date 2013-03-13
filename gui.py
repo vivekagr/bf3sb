@@ -55,16 +55,26 @@ class MainWindow(QtGui.QDialog):
 
         self.countries = []
         self.countries_full = []
+        self.detailed_settings = {
+            "premium": "-1",
+            "ranked": "-1",
+            "punkbuster": "-1",
+            "mapRotation": "-1",
+            "modeRotation": "-1",
+            "password": "-1"
+        }
 
         # Lets make the buttons
         self.browse_button = QtGui.QPushButton('Browse')
         default_button = QtGui.QPushButton('Default')
         regions_button = QtGui.QPushButton('Set Region')
+        detailed_settings_button = QtGui.QPushButton('Settings')
         # QHBoxLayout for the buttons
         button_hbox = QtGui.QHBoxLayout()
         # Adding the buttons to the layout. addStretch() adds blank space between the buttons.
         button_hbox.addWidget(default_button)
         button_hbox.addStretch(True)
+        button_hbox.addWidget(detailed_settings_button)
         button_hbox.addWidget(regions_button)
         button_hbox.addWidget(self.browse_button)
 
@@ -99,7 +109,8 @@ class MainWindow(QtGui.QDialog):
 
         self.browse_button.clicked.connect(self.fetch_data)
         default_button.clicked.connect(self.set_default)
-        regions_button.clicked.connect(self.callRegionWindow)
+        regions_button.clicked.connect(self.call_region_window)
+        detailed_settings_button.clicked.connect(self.call_settings_window)
 
         self.setLayout(vbox)
         self.set_default()
@@ -167,11 +178,11 @@ class MainWindow(QtGui.QDialog):
         self.build_url(self.free_slots_check_box, BF3Server.free_slots, 'slots')
         self.build_url(self.preset_check_box, BF3Server.preset, 'gamepresets')
         self.build_url(self.game_check_box, BF3Server.game, 'gameexpansions')
+        self.base_url.add(self.detailed_settings)
         if self.countries:
             self.base_url.add({'useLocation': '1'})
             self.base_url.add({'country': '|'.join(self.countries)})
         print self.base_url
-        print self.countries
         try:
             server_list = browse_server(url=str(self.base_url), limit=self.results_limit_spinbox.value())
         except URLError:
@@ -198,7 +209,7 @@ class MainWindow(QtGui.QDialog):
                 map_name = [x for x, y in bf3_data_list.iteritems() if y == checkbox.text()]
                 self.base_url.add({param_name: map_name})
 
-    def callRegionWindow(self):
+    def call_region_window(self):
         """
         Invokes the Region Selection dialog.
         """
@@ -222,6 +233,19 @@ class MainWindow(QtGui.QDialog):
                 self.countries = [y.lower() for x in checked_countries for y, z in COUNTRY.iteritems() if z == x.upper()]
             else:
                 self.region_label.setText("Region: None")
+
+    def call_settings_window(self):
+        """
+        Invokes the Settings dialog.
+        """
+        dialog = SettingsWindow(self.detailed_settings)
+        if dialog.exec_():
+            value = {'Yes': '1', 'No': '0', 'All': '-1'}
+            for param_name, radio_buttons in dialog.radio_buttons.iteritems():
+                for radio_btn in radio_buttons:
+                    if radio_btn.isChecked():
+                        self.detailed_settings[param_name] = value[radio_btn.text()]
+        print self.detailed_settings
 
 
 class RegionWindow(MainWindow):
@@ -280,6 +304,79 @@ class RegionWindow(MainWindow):
                 for check_box in check_boxes:
                     if check_box.text() in self.countries:
                         check_box.toggle()
+
+
+class SettingsWindow(QtGui.QDialog):
+    def __init__(self, detailed_settings, parent=None):
+        super(SettingsWindow, self).__init__(parent)
+        self.setWindowTitle("Settings")
+        self.detailed_settings = detailed_settings
+
+        vbox = QtGui.QVBoxLayout()
+
+        premium, premium_radio_buttons = self.make_group_radio_buttons("Premium")
+        ranked, ranked_radio_buttons = self.make_group_radio_buttons("Ranked")
+        punkbuster, punkbuster_radio_buttons = self.make_group_radio_buttons("Punkbuster")
+        map_rotation, map_rotation_radio_buttons = self.make_group_radio_buttons("Map Rotation")
+        mode_rotation, mode_rotation_radio_buttons = self.make_group_radio_buttons("Game Mode Rotation")
+        password_protection, password_protection_radio_buttons = self.make_group_radio_buttons("Password Protection")
+
+        self.radio_buttons = {
+            "premium": premium_radio_buttons,
+            "ranked": ranked_radio_buttons,
+            "punkbuster": punkbuster_radio_buttons,
+            "mapRotation": map_rotation_radio_buttons,
+            "modeRotation": mode_rotation_radio_buttons,
+            "password": password_protection_radio_buttons
+        }
+
+        grid = QtGui.QGridLayout()
+        grid.setSpacing(12)
+        grid.addWidget(premium, 0, 0)
+        grid.addWidget(ranked, 0, 1)
+        grid.addWidget(punkbuster, 0, 2)
+        grid.addWidget(map_rotation, 1, 0)
+        grid.addWidget(mode_rotation, 1, 1)
+        grid.addWidget(password_protection, 1, 2)
+        vbox.addLayout(grid)
+
+        button_hbox = QtGui.QHBoxLayout()
+        ok_button = QtGui.QPushButton("OK")
+        cancel_button = QtGui.QPushButton("Cancel")
+        button_hbox.addStretch(True)
+        button_hbox.addWidget(ok_button)
+        button_hbox.addWidget(cancel_button)
+        vbox.addLayout(button_hbox)
+
+        self.connect(ok_button, QtCore.SIGNAL("clicked()"), self, QtCore.SLOT("accept()"))
+        self.connect(cancel_button, QtCore.SIGNAL("clicked()"), self, QtCore.SLOT("reject()"))
+
+        self.check_already_selected_boxes()
+
+        self.setLayout(vbox)
+
+    def make_group_radio_buttons(self, title):
+        group_box = QtGui.QGroupBox(title)
+        hbox = QtGui.QHBoxLayout()
+        true_radio_button = QtGui.QRadioButton("Yes")
+        false_radio_button = QtGui.QRadioButton("No")
+        none_radio_button = QtGui.QRadioButton("All")
+        none_radio_button.setChecked(True)
+        hbox.addWidget(true_radio_button)
+        hbox.addWidget(false_radio_button)
+        hbox.addWidget(none_radio_button)
+        group_box.setLayout(hbox)
+        radio_buttons = (true_radio_button, false_radio_button, none_radio_button)
+        return group_box, radio_buttons
+
+    def check_already_selected_boxes(self):
+        if self.detailed_settings:
+            value_dict = {'1': 'Yes', '0': 'No', '-1': 'All'}
+            for param_name, value in self.detailed_settings.iteritems():
+                for radio_button in self.radio_buttons[param_name]:
+                    if value_dict[value] == radio_button.text():
+                        radio_button.setChecked(True)
+
 
 app = QtGui.QApplication(sys.argv)
 window = MainWindow()
