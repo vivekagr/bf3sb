@@ -12,10 +12,10 @@ from iso_country_codes import COUNTRY
 from pinger import do_one
 
 
-class MainWindow(QtGui.QDialog):
+class MainDialog(QtGui.QDialog):
 
     def __init__(self, parent=None):
-        super(MainWindow, self).__init__(parent)
+        super(MainDialog, self).__init__(parent)
         self.setWindowTitle('Battlefield 3 Server Browser')
         self.setWindowFlags(QtGui.QStyle.SP_TitleBarMinButton)
         # Main Vertical Box Layout
@@ -170,7 +170,6 @@ class MainWindow(QtGui.QDialog):
             error_msg = "Cannot ping the servers since the application doesn't have admin privilege."
             QtGui.QMessageBox.warning(self, "Socket Error", error_msg)
             return
-        start_time = time()
         self.base_url = furl("http://battlelog.battlefield.com/bf3/servers/")
         self.base_url.add({'filtered': '1'})
         self.build_url(self.map_check_box, BF3Server.map_code, 'maps')
@@ -186,21 +185,13 @@ class MainWindow(QtGui.QDialog):
         if self.server_name_search_box.text():
             self.base_url.add({'q': self.server_name_search_box.text()})
         print self.base_url
-        try:
-            params = dict(url=str(self.base_url), limit=self.results_limit_spinbox.value(),
-                          ping_repeat=self.ping_repeat, ping_step=self.ping_step)
-            server_list = browse_server(**params)
-        except URLError:
-            error_msg = "Unable to retrieve server data from the Battlelog. Please check your network connection."
-            QtGui.QMessageBox.warning(self, "Network Error", error_msg)
-            return
-        time_elapsed = round(time() - start_time, 2)
-        template_env = Environment()
-        template_env.loader = FileSystemLoader('.')
-        template_args = dict(servers=enumerate(server_list), bf3=BF3Server, time_elapsed=time_elapsed)
-        output = template_env.get_template('layout.html').render(**template_args).encode('utf8')
-        open('output_temp.html', 'w').write(output)
-        webbrowser.open('output_temp.html')
+        params = dict(url=str(self.base_url), limit=self.results_limit_spinbox.value(),
+                      ping_repeat=self.ping_repeat, ping_step=self.ping_step)
+        self.worker = WorkerThread(params)
+        self.worker.start()
+        self.browse_button.setDisabled(True)
+        self.worker.network_error_signal.connect(self.show_network_error_message)
+        self.worker.completed.connect(self.enable_browse_button)
 
     def build_url(self, check_box_list, bf3_data_list, param_name):
         """
@@ -213,6 +204,13 @@ class MainWindow(QtGui.QDialog):
                 map_name = [x for x, y in bf3_data_list.iteritems() if y == checkbox.text()]
                 self.base_url.add({param_name: map_name})
 
+    def show_network_error_message(self):
+        error_msg = "Unable to retrieve server data from the Battlelog. Please check your network connection."
+        QtGui.QMessageBox.warning(self, "Network Error", error_msg)
+
+    def enable_browse_button(self):
+        self.browse_button.setEnabled(True)
+
     def call_region_window(self):
         """
         Invokes the Region Selection dialog.
@@ -223,7 +221,7 @@ class MainWindow(QtGui.QDialog):
             error_message = "Unable to retrieve region data from the Battlelog. Please check your network connection."
             QtGui.QMessageBox.warning(self, "Network Error", error_message)
             return
-        dialog = RegionWindow(country_codes, self.countries_full)
+        dialog = RegionDialog(country_codes, self.countries_full)
         if dialog.exec_():
             checked_countries = []
             for region in dialog.cc_check_boxes:
@@ -255,10 +253,10 @@ class MainWindow(QtGui.QDialog):
         print self.detailed_settings
 
 
-class RegionWindow(MainWindow):
+class RegionDialog(MainDialog):
 
     def __init__(self, country_codes, countries, parent=None):
-        super(MainWindow, self).__init__(parent)
+        super(MainDialog, self).__init__(parent)
         self.setWindowTitle('Region Selector')
         self.countries = countries
         vbox = QtGui.QVBoxLayout()
@@ -301,6 +299,7 @@ class RegionWindow(MainWindow):
         self.check_already_selected_boxes()
 
         self.setLayout(vbox)
+        self.setFixedSize(self.sizeHint())
 
     def clear_checkboxes(self):
         self.clear_all_checkboxes(self.cc_check_boxes)
@@ -314,6 +313,7 @@ class RegionWindow(MainWindow):
 
 
 class SettingsWindow(QtGui.QDialog):
+
     def __init__(self, detailed_settings, ping_repeat_val, ping_step_val, parent=None):
         super(SettingsWindow, self).__init__(parent)
         self.setWindowTitle("Settings")
@@ -382,6 +382,7 @@ class SettingsWindow(QtGui.QDialog):
         self.check_already_selected_boxes()
 
         self.setLayout(vbox)
+        self.setFixedSize(self.sizeHint())
 
     def make_group_radio_buttons(self, title):
         group_box = QtGui.QGroupBox(title)
@@ -406,8 +407,34 @@ class SettingsWindow(QtGui.QDialog):
                         radio_button.setChecked(True)
 
 
+class WorkerThread(QtCore.QThread):
+
+    network_error_signal = QtCore.Signal()
+    completed = QtCore.Signal()
+
+    def __init__(self, params, parent=None):
+        super(WorkerThread, self).__init__(parent)
+        self.params = params
+
+    def run(self):
+        start_time = time()
+        try:
+            server_list = browse_server(**self.params)
+        except URLError:
+            self.network_error_signal.emit()
+        else:
+            time_elapsed = round(time() - start_time, 2)
+            template_env = Environment()
+            template_env.loader = FileSystemLoader('.')
+            template_args = dict(servers=enumerate(server_list), bf3=BF3Server, time_elapsed=time_elapsed)
+            output = template_env.get_template('layout.html').render(**template_args).encode('utf8')
+            open('output_temp.html', 'w').write(output)
+            webbrowser.open('output_temp.html')
+        finally:
+            self.completed.emit()
+
 app = QtGui.QApplication(sys.argv)
-window = MainWindow()
+window = MainDialog()
 window.show()
 window.setFixedSize(window.size())
 app.exec_()
