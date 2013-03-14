@@ -12,12 +12,12 @@ from iso_country_codes import COUNTRY
 from pinger import do_one
 
 
-class MainDialog(QtGui.QDialog):
+class MainWindow(QtGui.QMainWindow):
 
     def __init__(self, parent=None):
-        super(MainDialog, self).__init__(parent)
+        super(MainWindow, self).__init__(parent)
         self.setWindowTitle('Battlefield 3 Server Browser')
-        self.setWindowFlags(QtGui.QStyle.SP_TitleBarMinButton)
+
         # Main Vertical Box Layout
         vbox = QtGui.QVBoxLayout()
 
@@ -114,7 +114,9 @@ class MainDialog(QtGui.QDialog):
         regions_button.clicked.connect(self.call_region_window)
         detailed_settings_button.clicked.connect(self.call_settings_window)
 
-        self.setLayout(vbox)
+        temp = QtGui.QWidget()
+        temp.setLayout(vbox)
+        self.setCentralWidget(temp)
         self.set_default()
 
     def make_layout(self, col, label_list, group_box_label):
@@ -170,6 +172,7 @@ class MainDialog(QtGui.QDialog):
             error_msg = "Cannot ping the servers since the application doesn't have admin privilege."
             QtGui.QMessageBox.warning(self, "Socket Error", error_msg)
             return
+        self.browse_button.setText("Working...")
         self.base_url = furl("http://battlelog.battlefield.com/bf3/servers/")
         self.base_url.add({'filtered': '1'})
         self.build_url(self.map_check_box, BF3Server.map_code, 'maps')
@@ -210,6 +213,7 @@ class MainDialog(QtGui.QDialog):
 
     def enable_browse_button(self):
         self.browse_button.setEnabled(True)
+        self.browse_button.setText("Browse")
 
     def call_region_window(self):
         """
@@ -250,13 +254,12 @@ class MainDialog(QtGui.QDialog):
                         self.detailed_settings[param_name] = value[radio_btn.text()]
             self.ping_repeat = dialog.ping_repeat.value()
             self.ping_step = dialog.ping_step.value()
-        print self.detailed_settings
 
 
-class RegionDialog(MainDialog):
+class RegionDialog(QtGui.QDialog, MainWindow):
 
     def __init__(self, country_codes, countries, parent=None):
-        super(MainDialog, self).__init__(parent)
+        QtGui.QDialog.__init__(self, parent)
         self.setWindowTitle('Region Selector')
         self.countries = countries
         vbox = QtGui.QVBoxLayout()
@@ -434,7 +437,7 @@ class WorkerThread(QtCore.QThread):
             self.completed.emit()
 
 app = QtGui.QApplication(sys.argv)
-window = MainDialog()
+window = MainWindow()
 window.show()
 window.setFixedSize(window.size())
 app.exec_()
