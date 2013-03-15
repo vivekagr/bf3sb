@@ -1,12 +1,16 @@
 import sys
+import os
+import random
+import string
 import webbrowser
+from time import time
 from socket import error as socker_error
 from urllib2 import URLError
+from tempfile import gettempdir
 from PySide import QtGui, QtCore
 from furl.furl import furl
 from jinja2 import FileSystemLoader
 from jinja2.environment import Environment
-from time import time
 from bf3 import BF3Server, browse_server, get_regions
 from iso_country_codes import COUNTRY
 from pinger import do_one
@@ -431,8 +435,15 @@ class WorkerThread(QtCore.QThread):
             template_env.loader = FileSystemLoader('.')
             template_args = dict(servers=enumerate(server_list), bf3=BF3Server, time_elapsed=time_elapsed)
             output = template_env.get_template('layout.html').render(**template_args).encode('utf8')
-            open('output_temp.html', 'w').write(output)
-            webbrowser.open('output_temp.html')
+            temp_storage_dir = gettempdir() + '\\bf3sb'
+            if not os.access(temp_storage_dir, os.F_OK):
+                os.mkdir(temp_storage_dir)
+            random_file_name = ''.join(random.sample(string.lowercase + string.digits, 20)) + '.html'
+            random_file_path = temp_storage_dir + '\\' + random_file_name
+            f = open(random_file_path, 'w')
+            f.write(output)
+            f.close()
+            webbrowser.open(random_file_path)
         finally:
             self.completed.emit()
 
