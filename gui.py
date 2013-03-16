@@ -7,9 +7,10 @@ from time import time
 from socket import error as socker_error
 from urllib2 import URLError
 from tempfile import gettempdir
+
 from PySide import QtGui, QtCore
+import icon_qr
 from furl.furl import furl
-from jinja2 import FileSystemLoader
 from jinja2.environment import Environment
 from bf3 import BF3Server, browse_server, get_regions
 from iso_country_codes import COUNTRY
@@ -21,6 +22,7 @@ class MainWindow(QtGui.QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
         self.setWindowTitle('Battlefield 3 Server Browser')
+        self.setWindowIcon(QtGui.QIcon(':/icon/icon.png'))
 
         # Main Vertical Box Layout
         vbox = QtGui.QVBoxLayout()
@@ -265,6 +267,8 @@ class RegionDialog(QtGui.QDialog, MainWindow):
     def __init__(self, country_codes, countries, parent=None):
         QtGui.QDialog.__init__(self, parent)
         self.setWindowTitle('Region Selector')
+        self.setWindowIcon(QtGui.QIcon(':/icon/icon.png'))
+
         self.countries = countries
         vbox = QtGui.QVBoxLayout()
 
@@ -319,11 +323,13 @@ class RegionDialog(QtGui.QDialog, MainWindow):
                         check_box.toggle()
 
 
-class SettingsWindow(QtGui.QDialog):
+class SettingsWindow(QtGui.QDialog, MainWindow):
 
     def __init__(self, detailed_settings, ping_repeat_val, ping_step_val, parent=None):
         super(SettingsWindow, self).__init__(parent)
         self.setWindowTitle("Settings")
+        self.setWindowIcon(QtGui.QIcon(':/icon/icon.png'))
+
         self.detailed_settings = detailed_settings
         self.ping_repeat_val = ping_repeat_val
         self.ping_step_val = ping_step_val
@@ -431,10 +437,15 @@ class WorkerThread(QtCore.QThread):
             self.network_error_signal.emit()
         else:
             time_elapsed = round(time() - start_time, 2)
+            # PyInstaller extracts the files (inc. layout.html) to a temp dir and its path can is stored in sys._MEIPASS
+            if getattr(sys, 'frozen', None):
+                basedir = sys._MEIPASS
+            else:
+                basedir = os.path.dirname(__file__)
+            template_file = open(basedir + '\\layout.html').read().decode('utf8')
             template_env = Environment()
-            template_env.loader = FileSystemLoader('.')
             template_args = dict(servers=enumerate(server_list), bf3=BF3Server, time_elapsed=time_elapsed)
-            output = template_env.get_template('layout.html').render(**template_args).encode('utf8')
+            output = template_env.from_string(template_file).render(**template_args).encode('utf8')
             temp_storage_dir = gettempdir() + '\\bf3sb'
             if not os.access(temp_storage_dir, os.F_OK):
                 os.mkdir(temp_storage_dir)
