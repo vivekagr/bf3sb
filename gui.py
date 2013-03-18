@@ -2,6 +2,7 @@ import sys
 import os
 import random
 import string
+import pickle
 import webbrowser
 from time import time
 from socket import error as socker_error
@@ -23,7 +24,9 @@ class MainWindow(QtGui.QMainWindow):
         super(MainWindow, self).__init__(parent)
         self.setWindowTitle('Battlefield 3 Server Browser')
         self.setWindowIcon(QtGui.QIcon(':/icon/icon.png'))
+        self.build_together()
 
+    def build_together(self):
         # Main Vertical Box Layout
         vbox = QtGui.QVBoxLayout()
 
@@ -69,7 +72,7 @@ class MainWindow(QtGui.QMainWindow):
             "modeRotation": "-1",
             "password": "-1"
         }
-        self.ping_repeat = 3
+        self.ping_repeat = 1
         self.ping_step = 5
 
         # Lets make the buttons
@@ -123,7 +126,7 @@ class MainWindow(QtGui.QMainWindow):
         temp = QtGui.QWidget()
         temp.setLayout(vbox)
         self.setCentralWidget(temp)
-        self.set_default()
+        self.get_config()
 
     def make_layout(self, col, label_list, group_box_label):
         """
@@ -166,12 +169,86 @@ class MainWindow(QtGui.QMainWindow):
                 if check_box.isChecked():
                     check_box.toggle()
 
+    def save_config(self):
+        """ Dumps all the search parameters to a pickle file. """
+        data = {
+            'maps': self.get_app_settings(self.map_check_box, BF3Server.map_code),
+            'modes': self.get_app_settings(self.mode_check_box, BF3Server.game_mode),
+            'size': self.get_app_settings(self.game_size_check_box, BF3Server.game_size),
+            'slots': self.get_app_settings(self.free_slots_check_box, BF3Server.free_slots),
+            'preset': self.get_app_settings(self.preset_check_box, BF3Server.preset),
+            'game': self.get_app_settings(self.game_check_box, BF3Server.game),
+            'search': self.server_name_search_box.text(),
+            'limit': self.results_limit_spinbox.value(),
+            'countries': self.countries,
+            'settings': self.detailed_settings,
+            'ping_repeat': self.ping_repeat,
+            'ping_step': self.ping_step
+        }
+        if getattr(sys, 'frozen', None):
+            basedir = sys._MEIPASS
+        else:
+            basedir = os.path.dirname(__file__)
+        f = open(basedir + '\settings.pickle', 'w')
+        pickle.dump(data, f)
+        f.close()
+
+    def get_app_settings(self, check_box_list, bf3_data_list):
+        """ Finds if all the checkboxes in check_box_list are checked and returns their corresponding values. """
+        result = []
+        for check_box in check_box_list:
+            if check_box.isChecked():
+                short_code = [x for x, y in bf3_data_list.iteritems() if y == check_box.text()]
+                result.append(short_code[0])
+        return result
+
+    def get_config(self):
+        """ Loads the search parameters from the pickle file. """
+        try:
+            if getattr(sys, 'frozen', None):
+                basedir = sys._MEIPASS
+            else:
+                basedir = os.path.dirname(__file__)
+            f = open(basedir + '\settings.pickle')
+            data = pickle.load(f)
+            self.set_app_settings(self.map_check_box, BF3Server.map_code, data['maps'])
+            self.set_app_settings(self.mode_check_box, BF3Server.game_mode, data['modes'])
+            self.set_app_settings(self.game_size_check_box, BF3Server.game_size, data['size'])
+            self.set_app_settings(self.free_slots_check_box, BF3Server.free_slots, data['slots'])
+            self.set_app_settings(self.preset_check_box, BF3Server.preset, data['preset'])
+            self.set_app_settings(self.game_check_box, BF3Server.game, data['game'])
+            self.server_name_search_box.setText(data['search'])
+            if data['limit']:
+                self.results_limit_spinbox.setValue(int(data['limit']))
+            else:
+                self.results_limit_spinbox.setValue(30)
+            self.countries = data['countries']
+            self.countries_full = [COUNTRY[x.upper()].title() for x in self.countries]
+            if data['countries']:
+                region_label_text = "Regions: " + ', '.join(self.countries_full)
+                self.region_label.setText(region_label_text)
+            self.ping_repeat = data['ping_repeat']
+            self.ping_step = data['ping_step']
+            f.close()
+        except IOError:
+            self.set_default()
+
+    def set_app_settings(self, check_box_list, bf3_data_list, data):
+        """ Checks the appropriate check boxes based on the provided data. """
+        if not data:
+            return
+        for check_box in check_box_list:
+            short_code = [x for x, y in bf3_data_list.iteritems() if y == check_box.text()][0]
+            if short_code in data:
+                check_box.toggle()
+
     def fetch_data(self):
         """
         Fetches the data from Battlelog and shows the result to the user.
         Here self.build_url() is called for every QCheckBox list we have.
         Checks whether the application has admin privilege by sending one ping.
         """
+        self.save_config()
         try:
             do_one("battlelog.battlefield.com")
         except socker_error:
@@ -193,7 +270,6 @@ class MainWindow(QtGui.QMainWindow):
             self.base_url.add({'country': '|'.join(self.countries)})
         if self.server_name_search_box.text():
             self.base_url.add({'q': self.server_name_search_box.text()})
-        print self.base_url
         params = dict(url=str(self.base_url), limit=self.results_limit_spinbox.value(),
                       ping_repeat=self.ping_repeat, ping_step=self.ping_step)
         self.worker = WorkerThread(params)
@@ -204,14 +280,14 @@ class MainWindow(QtGui.QMainWindow):
 
     def build_url(self, check_box_list, bf3_data_list, param_name):
         """
-        Checks every QCheckBox object in check_box_list for whether it is checked
+        Finds every QCheckBox object in check_box_list for whether it is checked
         and builds URL query according to that.
         Doesn't returns anything. Just modifies the self.base_url
         """
         for checkbox in check_box_list:
             if checkbox.isChecked():
-                map_name = [x for x, y in bf3_data_list.iteritems() if y == checkbox.text()]
-                self.base_url.add({param_name: map_name})
+                short_code = [x for x, y in bf3_data_list.iteritems() if y == checkbox.text()]
+                self.base_url.add({param_name: short_code})
 
     def show_network_error_message(self):
         error_msg = "Unable to retrieve server data from the Battlelog. Please check your network connection."
@@ -441,7 +517,7 @@ class WorkerThread(QtCore.QThread):
             if getattr(sys, 'frozen', None):
                 basedir = sys._MEIPASS
             else:
-                basedir = os.path.dirname(__file__)
+                basedir = os.path.dirname(__file__) or '.'
             template_file = open(basedir + '\\layout.html').read().decode('utf8')
             template_env = Environment()
             template_args = dict(servers=enumerate(server_list), bf3=BF3Server, time_elapsed=time_elapsed)
