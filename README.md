@@ -3,7 +3,7 @@ Battlefield 3 (Unofficial) Server Browser
 
 A desktop application (as an alternative to web based Battlelog) for browsing Battlefield 3 servers.
 
-![Application Screenshot](https://github.com/vivekagr/bf3/raw/master/images/app.png "Battlefield 3 Server Browser")
+![Application Screenshot](https://github.com/vivekagr/bf3sb/raw/master/images/app.png "Battlefield 3 Server Browser")
 
 
 But why?!
@@ -23,7 +23,7 @@ On an unstable connection, you might still get incorrect ping.
 To solve this problem, you can set the application to repeat the pinging process a specified number of times and then show you 
 the average value.
 
-![Settings Dialog](https://github.com/vivekagr/bf3/raw/master/images/settings.png "Settings Dialog")
+![Settings Dialog](https://github.com/vivekagr/bf3sb/raw/master/images/settings.png "Settings Dialog")
 
 After the application is done fetching the server data and pinging them, it renders the result in HTML format and opens it in the system's default browser.
 

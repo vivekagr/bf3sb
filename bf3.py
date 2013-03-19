@@ -7,7 +7,7 @@ from pinger import multi_ping_query
 from urllib2 import urlopen, Request
 from iso_country_codes import COUNTRY
 
-USER_AGENT = "Battlefield 3 Server Browser v0.1 - https://github.com/vivekagr/bf3"
+USER_AGENT = "Battlefield 3 Server Browser - https://github.com/vivekagr/bf3sb"
 
 
 class ProfileNotFoundError(Exception):
