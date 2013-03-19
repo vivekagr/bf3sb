@@ -11,8 +11,6 @@ But why?!
 
 Battlelog's ping function doesn't work or is inaccurate with low bandwidth or higher latency connections.
 
-Also I don't like the 30 servers limit and want to be able to get a lot more results.
-
 
 How does it work?
 ------------------
