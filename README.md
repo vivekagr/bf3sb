@@ -1,5 +1,12 @@
+Update
+------
+
+Battlelog's (undocumented) APIs have changed and hence, this doesn't works anymore. Project will be update soon. Pull requests welcome.
+
+
+
 Battlefield 3 (Unofficial) Server Browser
-============================
+=========================================
 
 A desktop application (as an alternative to web based Battlelog) for browsing Battlefield 3 servers.
 
